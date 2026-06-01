@@ -228,6 +228,10 @@ def create_app(test_config=None):
     # template filters
     app.jinja_env.filters["format_decimal"] = format_decimal
 
+    from .localization import register_localization
+
+    register_localization(app)
+
     # apply the blueprints to the app
     from . import auth, wallet, api_v1, callback
 
