@@ -50,6 +50,42 @@ function precise(x)
     return x.toFixed(2);
 }
 
+function getShkeeperLocale()
+{
+    let match = document.cookie.match(/(?:^|;\s*)shkeeper_locale=([^;]+)/);
+    if (!match) {
+        return "en";
+    }
+    return decodeURIComponent(match[1]).replace("-", "_");
+}
+
+function localizeDynamicLabel(label)
+{
+    if (getShkeeperLocale().toLowerCase() !== "zh_cn") {
+        return label;
+    }
+
+    const labels = {
+        "Enabled": "\u5df2\u542f\u7528",
+        "Disabled": "\u5df2\u7981\u7528",
+        "Online": "\u5728\u7ebf",
+        "Offline": "\u79bb\u7ebf",
+        "Synced": "\u5df2\u540c\u6b65",
+        "Sync In Progress": "\u540c\u6b65\u4e2d"
+    };
+
+    if (labels[label]) {
+        return labels[label];
+    }
+    if (label.indexOf("Sync In Progress") === 0) {
+        return label.replace("Sync In Progress", labels["Sync In Progress"]);
+    }
+    if (label.indexOf("Synced") === 0) {
+        return label.replace("Synced", labels["Synced"]);
+    }
+    return label;
+}
+
 function getCryptoRate(crypto)
 {
     let cryptoName = crypto.toUpperCase();
@@ -110,23 +146,23 @@ function refreshWalletInfo()
         let splits = serverStatus.split(" ", 1);
         if(splits[0] == "Synced")
         {
-            serverStatusF.innerHTML = serverStatus;
+            serverStatusF.innerHTML = localizeDynamicLabel(serverStatus);
             serverStatusF.style.color = "var(--success-color)";
-            walletStatus.innerHTML = "Online";
+            walletStatus.innerHTML = localizeDynamicLabel("Online");
             walletStatus.style.color = "var(--success-color)";
         }
         else if(splits[0] == "Sync")
         {
-            serverStatusF.innerHTML = serverStatus;
+            serverStatusF.innerHTML = localizeDynamicLabel(serverStatus);
             serverStatusF.style.color = "var(--success-color)";
-            walletStatus.innerHTML = "Offline";
+            walletStatus.innerHTML = localizeDynamicLabel("Offline");
             walletStatus.style.color = "var(--danger-color)";
         }
         else
         {
-            serverStatusF.innerHTML = serverStatus;
+            serverStatusF.innerHTML = localizeDynamicLabel(serverStatus);
             serverStatusF.style.color = "var(--danger-color)";
-            walletStatus.innerHTML = "Offline";
+            walletStatus.innerHTML = localizeDynamicLabel("Offline");
             walletStatus.style.color = "var(--danger-color)";
         }
     }
@@ -139,13 +175,13 @@ function setPolicyStatus()
         {
         case "False":
         {
-            item.innerHTML = "Disabled";
+            item.innerHTML = localizeDynamicLabel("Disabled");
             item.style.color = "var(--danger-color)";
             break;
         }
         case "True":
         {
-            item.innerHTML = "Enabled";
+            item.innerHTML = localizeDynamicLabel("Enabled");
             item.style.color = "var(--success-color)";
             break;
         }
@@ -191,17 +227,17 @@ function APIStatus()
         {
             if(status == activeStatus)
             {
-                APIswitcher.innerText = activeStatus;
+                APIswitcher.innerText = localizeDynamicLabel(activeStatus);
                 APIswitcher.style.color="var(--success-color)";
             }
             else if(status == unactiveStatus)
             {
-                APIswitcher.innerText = unactiveStatus;
+                APIswitcher.innerText = localizeDynamicLabel(unactiveStatus);
                 APIswitcher.style.color="var(--danger-color)";
             }
             else
             {
-                APIswitcher.innerText = offlineStatus;
+                APIswitcher.innerText = localizeDynamicLabel(offlineStatus);
                 APIswitcher.style.color="var(--danger-color)";
             }
         }

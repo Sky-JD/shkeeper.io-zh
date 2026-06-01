@@ -1,4 +1,5 @@
 import os
+import re
 
 from flask import request
 
@@ -41,6 +42,7 @@ ZH_CN_TRANSLATIONS = {
     "Enabled": "已启用",
     "Synced": "已同步",
     "Offline": "离线",
+    "Online": "在线",
     "Sync In Progress": "同步中",
     "Currency": "货币",
     "Source of rate": "汇率来源",
@@ -49,6 +51,14 @@ ZH_CN_TRANSLATIONS = {
     "Price per coin:": "单币价格：",
     "Fee calculation": "手续费计算",
     "Fee calculation:": "手续费计算：",
+    "No fee": "不收手续费",
+    "Percent but not less than a minimal fixed fee": "按百分比收取，但不低于最低固定手续费",
+    "Fixed fee": "固定手续费",
+    "Percent": "按百分比",
+    "kraken": "Kraken",
+    "kucoin": "KuCoin",
+    "binance": "Binance",
+    "coinbase": "Coinbase",
     "Set all": "批量设置",
     "Save changes": "保存更改",
     "Payment gateway is disabled": "支付网关已禁用",
@@ -102,6 +112,19 @@ ZH_CN_TRANSLATIONS = {
     "Next": "下一页",
     "Two-Factor Authentication": "双因素认证",
     "Disable Two-Factor Authentication": "关闭双因素认证",
+    "Enable Two-Factor Authentication": "启用双因素认证",
+    "2FA is enabled": "2FA 已启用",
+    "2FA is not enabled": "2FA 未启用",
+    "Enabled on ": "启用时间：",
+    "Unknown": "未知",
+    "Two-factor authentication adds an extra layer of security to your account by requiring a code from your authenticator app in addition to your password.": "双因素认证会在密码之外额外要求认证器验证码，为你的账户增加一层安全保护。",
+    "Protect your account with two-factor authentication": "使用双因素认证保护你的账户",
+    "Two-factor authentication (2FA) significantly enhances your account security by requiring:": "双因素认证（2FA）通过要求以下信息显著提升账户安全性：",
+    "Your password (something you know)": "你的密码（你知道的信息）",
+    "A code from your authenticator app (something you have)": "认证器应用中的验证码（你持有的信息）",
+    "To enable 2FA, you'll need:": "启用 2FA 前你需要：",
+    "An authenticator app like Google Authenticator, Authy, or Microsoft Authenticator": "一个认证器应用，例如 Google Authenticator、Authy 或 Microsoft Authenticator",
+    "A few minutes to complete the setup": "几分钟时间完成设置",
     "Warning:": "警告：",
     "Warning:": "警告：",
     "Account Information": "账户信息",
@@ -178,11 +201,42 @@ def _enabled_locale():
     return locale
 
 
-def _translate_html(html):
-    translated = html
+def _translate_text(text):
+    translated = text
     for source, target in sorted(ZH_CN_TRANSLATIONS.items(), key=lambda item: len(item[0]), reverse=True):
         translated = translated.replace(source, target)
     return translated
+
+
+def _translate_html(html):
+    html = re.sub(
+        r'(<html\b[^>]*\blang=["\'])en(["\'][^>]*>)',
+        r"\1zh-CN\2",
+        html,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+
+    parts = re.split(r"(<[^>]+>)", html)
+    translated = []
+    raw_text_tag = None
+
+    for part in parts:
+        if not part:
+            continue
+
+        if part.startswith("<"):
+            tag_match = re.match(r"</?\s*([a-zA-Z0-9:-]+)", part)
+            if tag_match:
+                tag_name = tag_match.group(1).lower()
+                if tag_name in {"script", "style"}:
+                    raw_text_tag = None if part.startswith("</") else tag_name
+            translated.append(part)
+            continue
+
+        translated.append(part if raw_text_tag else _translate_text(part))
+
+    return "".join(translated)
 
 
 def register_localization(app):
