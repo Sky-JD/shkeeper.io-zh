@@ -4,6 +4,48 @@ const LTC = "LTC";
 const DOGE = "DOGE"
 console.log(crypto);
 
+function getShkeeperLocale()
+{
+    let match = document.cookie.match(/(?:^|;\s*)shkeeper_locale=([^;]+)/);
+    if (!match) {
+        return "en";
+    }
+    return decodeURIComponent(match[1]).replace("-", "_");
+}
+
+function localizeManageLabel(label)
+{
+    if (getShkeeperLocale().toLowerCase() !== "zh_cn") {
+        return label;
+    }
+
+    const labels = {
+        "Activate": "\u542f\u7528",
+        "Deactivate": "\u505c\u7528",
+        "Active": "\u5df2\u542f\u7528",
+        "Inactive": "\u672a\u542f\u7528",
+        "On": "\u5f00\u542f",
+        "Off": "\u5173\u95ed",
+        "Server Online": "\u8282\u70b9\u5728\u7ebf",
+        "Server Syncing": "\u8282\u70b9\u540c\u6b65\u4e2d",
+        "Server Offline": "\u8282\u70b9\u79bb\u7ebf",
+        "Saved": "\u5df2\u4fdd\u5b58",
+        "Please, Fields cannot be empty or check if the values are entered correctly.": "\u5b57\u6bb5\u4e0d\u80fd\u4e3a\u7a7a\uff0c\u8bf7\u68c0\u67e5\u8f93\u5165\u503c\u662f\u5426\u6b63\u786e\u3002",
+        "Response stauts: ": "\u54cd\u5e94\u72b6\u6001\uff1a",
+        "Destination Address doesn't match Valid Litecoin address.": "\u6536\u6b3e\u5730\u5740\u4e0d\u662f\u6709\u6548\u7684 Litecoin \u5730\u5740\u3002",
+        "Destination Address doesn't match Valid Dogecoin address.": "\u6536\u6b3e\u5730\u5740\u4e0d\u662f\u6709\u6548\u7684 Dogecoin \u5730\u5740\u3002"
+    };
+
+    return labels[label] || label;
+}
+
+function setAutopayoutStatus(element, enabled)
+{
+    element.dataset.policyStatus = enabled ? "on" : "off";
+    element.innerHTML = localizeManageLabel(enabled ? "On" : "Off");
+    element.style.color = enabled ? "var(--success-color)" : "var(--danger-color)";
+}
+
 function dropdown()
 {
   function addEventsToDropdown()
@@ -208,18 +250,16 @@ function policyFunc(){
   function policyStatusChange()
   {
     let policyStatus = this;
-    switch(policyStatus.innerHTML)
+    switch(policyStatus.dataset.policyStatus)
     {
-      case "On":
+      case "on":
       {
-        policyStatus.innerHTML = "Off";
-        policyStatus.style.color = "var(--danger-color)";
+        setAutopayoutStatus(policyStatus, false);
         break;
       }
-      case "Off":
+      case "off":
       {
-        policyStatus.innerHTML = "On";
-        policyStatus.style.color = "var(--success-color)";
+        setAutopayoutStatus(policyStatus, true);
         break;
       }
     }
@@ -231,14 +271,12 @@ function policyFunc(){
     {
       case "False":
       {
-        policyStatus.innerHTML = "Off";
-        policyStatus.style.color = "var(--danger-color)";
+        setAutopayoutStatus(policyStatus, false);
         break;
       }
       case "True":
       {
-        policyStatus.innerHTML = "On";
-        policyStatus.style.color = "var(--success-color)";
+        setAutopayoutStatus(policyStatus, true);
         break;
       }
     }
@@ -261,7 +299,7 @@ function sendAction()
     let http = new XMLHttpRequest();
     http.onload = function(){
       console.log("Ok!");
-      alert("Saved");
+      alert(localizeManageLabel("Saved"));
       addAdd();
     }
     http.open("POST","/api/v1/" + crypto + "/autopayout",true);
@@ -271,7 +309,7 @@ function sendAction()
     }
     else
     {
-      alert("Please, Fields cannot be empty or check if the values are entered correctly.")
+      alert(localizeManageLabel("Please, Fields cannot be empty or check if the values are entered correctly."))
     }
   }
   function addAdd()
@@ -289,7 +327,7 @@ function sendAction()
     }
     else
     {
-      alert("Please, Fields cannot be empty or check if the values are entered correctly.")
+      alert(localizeManageLabel("Please, Fields cannot be empty or check if the values are entered correctly."))
     }
   }
 
@@ -317,12 +355,12 @@ function sendAction()
     let payoutAdd = validateAddressValue(document.getElementById("paddress"));
     let payoutFee = document.getElementById("pfee").value.trim();
     let policyStatus = document.getElementById('pstatus');
-    switch(policyStatus.innerHTML)
+    switch(policyStatus.dataset.policyStatus)
     {
-      case "On":
+      case "on":
         policyStatus = true;
         break;
-      case "Off":
+      case "off":
         policyStatus = false;
         break
     }
@@ -453,7 +491,7 @@ function sendAction()
           }
           else
           {
-            alert("Destination Address doesn't match Valid Litecoin address.");
+            alert(localizeManageLabel("Destination Address doesn't match Valid Litecoin address."));
             document.querySelector(".dropdown__header").classList.add("red-highlight");
             check = false;
           }
@@ -467,7 +505,7 @@ function sendAction()
           }
           else
           {
-            alert("Destination Address doesn't match Valid Dogecoin address.");
+            alert(localizeManageLabel("Destination Address doesn't match Valid Dogecoin address."));
             document.querySelector(".dropdown__header").classList.add("red-highlight");
             check = false;
           }
@@ -522,17 +560,17 @@ function serverStatus()
         if (serverStatusEl) {
           if(splits[0] == "Synced")
           {
-              serverStatusEl.innerHTML = "Server Online";
+              serverStatusEl.innerHTML = localizeManageLabel("Server Online");
               serverStatusEl.style.color = "var(--success-color)";
           }
           else if(splits[0] == "Sync")
           {
-              serverStatusEl.innerHTML = "Server Syncing";
+              serverStatusEl.innerHTML = localizeManageLabel("Server Syncing");
               serverStatusEl.style.color = "var(--success-color)";
           }
           else
           {
-              serverStatusEl.innerHTML = "Server Offline";
+              serverStatusEl.innerHTML = localizeManageLabel("Server Offline");
               serverStatusEl.style.color = "var(--danger-color)";
           }
         }
@@ -651,18 +689,20 @@ function paymentGatwey()
             if(status == activeStatus)
             {
               let status = document.getElementById('API-status');
-              APIswitcher.innerText = unactiveStatus;
+              APIswitcher.dataset.action = unactiveStatus;
+              APIswitcher.innerText = localizeManageLabel(unactiveStatus);
               status.classList.add('API-status-active');
               status.classList.remove('API-status-inactive');
-              status.innerHTML = "Active";
+              status.innerHTML = localizeManageLabel("Active");
             }
             else
             {
               let status = document.getElementById('API-status');
-              APIswitcher.innerText = activeStatus;
+              APIswitcher.dataset.action = activeStatus;
+              APIswitcher.innerText = localizeManageLabel(activeStatus);
               status.classList.add('API-status-inactive');
               status.classList.remove('API-status-active');
-              status.innerHTML = "Inactive";
+              status.innerHTML = localizeManageLabel("Inactive");
             }
         }
         function checkAnswer(response)
@@ -680,7 +720,7 @@ function paymentGatwey()
                     return data;
                 }
             }
-            alert("Response stauts: " + response.status);
+            alert(localizeManageLabel("Response stauts: ") + response.status);
             return false;
         }
         function sendAPIStatus(status, statusDescr)
@@ -691,7 +731,6 @@ function paymentGatwey()
                 let data = checkAnswer(this);
                 if(data != false)
                 {
-                    APIswitcher.innerText = statusDescr;
                     setStatus(statusDescr);
                 }
             }
@@ -699,11 +738,11 @@ function paymentGatwey()
         }
         function switchAPIStatus()
         {
-            if(APIswitcher.innerText == activeStatus)
+            if(APIswitcher.dataset.action == activeStatus)
             {
                 sendAPIStatus(true,activeStatus);
             }
-            else if(APIswitcher.innerText == unactiveStatus)
+            else if(APIswitcher.dataset.action == unactiveStatus)
             {
                 sendAPIStatus(false,unactiveStatus);
             }
@@ -757,7 +796,7 @@ function paymentGatwey()
             return data;
           }
         }
-        alert("Response stauts: " + response.status);
+        alert(localizeManageLabel("Response stauts: ") + response.status);
         return false;
       }
       generateBtn.addEventListener("click",sendAPIToken);

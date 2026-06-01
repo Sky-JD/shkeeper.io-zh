@@ -120,7 +120,7 @@
           <div class="policy-block d-flex align-items-center">
             <select class="form-select form-select--width common-text" id="ppolicy">
               {% for policy in ppolicy %}
-              <option {% if policy == crypto.wallet.ppolicy.value %} selected {% endif %}>{{policy}}</option>
+              <option value="{{ policy }}" {% if policy == crypto.wallet.ppolicy.value %} selected {% endif %}>{{policy}}</option>
               {% endfor %}
             </select>
             <p class="common-text text-nowrap mx-2">once per</p>
@@ -144,7 +144,7 @@
           <div class="policy-block d-flex align-items-center">
             <select class="form-select form-select--width common-text" id="prespolicy">
               {% for policy in prespolicy %}
-              <option {% if policy == crypto.wallet.prespolicy.value %} selected {% endif %}>{{policy}}</option>
+              <option value="{{ policy }}" {% if policy == crypto.wallet.prespolicy.value %} selected {% endif %}>{{policy}}</option>
               {% endfor %}
             </select>
             <p class="common-text text-nowrap mx-2"> leave untouched </p>

@@ -28,6 +28,16 @@ ZH_CN_TRANSLATIONS = {
     "Session expired. Please log in again.": "会话已过期，请重新登录。",
     "Crypto:": "币种：",
     "Server:": "节点：",
+    "Server": "节点",
+    "Host name:": "主机名：",
+    "Blockchain key:": "区块链密钥：",
+    "Advanced:": "高级：",
+    "Configure Tron settings": "配置 Tron 设置",
+    "Server offline": "节点离线",
+    "Server Online": "节点在线",
+    "Server Syncing": "节点同步中",
+    "Server Offline": "节点离线",
+    "WEB interface:": "WEB 界面：",
     "Wallet status:": "钱包状态：",
     "Amount:": "余额：",
     "Exchange rate:": "汇率：",
@@ -63,10 +73,18 @@ ZH_CN_TRANSLATIONS = {
     "Save changes": "保存更改",
     "Payment gateway is disabled": "支付网关已禁用",
     "Payment gateway is enabled": "支付网关已启用",
+    "Payment Gateway": "支付网关",
     "Payment gateway": "支付网关",
+    "Status:": "状态：",
+    "API URL:": "API 地址：",
+    "API Key:": "API 密钥：",
     "API Key": "API 密钥",
     "Secret": "密钥",
+    "Generate": "生成",
     "Generate new key": "生成新密钥",
+    "Activate": "启用",
+    "Deactivate": "停用",
+    "Inactive": "未启用",
     "Callback url:": "回调地址：",
     "External ID:": "外部订单号：",
     "External ID": "外部订单号",
@@ -102,6 +120,8 @@ ZH_CN_TRANSLATIONS = {
     "Download": "下载",
     "Destination:": "收款地址：",
     "Destination": "收款地址",
+    "Edit": "编辑",
+    "Fee:": "手续费：",
     "Available:": "可用：",
     "Estimated fee:": "预估手续费：",
     "Fee-deposit account:": "手续费充值账户：",
@@ -153,6 +173,43 @@ ZH_CN_TRANSLATIONS = {
     "Two-factor authentication is not enabled.": "双因素认证未启用。",
     "Two-factor authentication has been disabled.": "双因素认证已关闭。",
     "Backup code used successfully. Please generate new backup codes.": "备用码使用成功，请重新生成备用码。",
+    " wallet": " 钱包",
+    "Autopayout Policy": "自动提现策略",
+    "Autopayout:": "自动提现：",
+    "Policy:": "策略：",
+    "once per": "每",
+    "Min(s)": "分钟",
+    "Hour(s)": "小时",
+    "Day(s)": "天",
+    "Reserve:": "保留策略：",
+    "leave untouched": "保留",
+    "% of amount": "% 金额",
+    "Mark invoice as paid if amount": "当支付金额",
+    "paid is greater or equal to:": "大于或等于以下比例时标记订单已支付：",
+    "Credit overpayment to client's": "将超额支付计入客户",
+    "balance if paid more than:": "余额，当支付超过：",
+    "Recalculate invoice rate after": "在以下时间后重新计算订单汇率",
+    "Number of confirmation": "交易需要的确认数",
+    "needed for transaction": "",
+    "Save": "保存",
+    "On": "开启",
+    "Off": "关闭",
+    "Int": "整数",
+    "Float": "小数",
+    "Hours": "小时",
+    "Days": "天",
+    "Weeks": "周",
+    "amount": "固定数量",
+    "percent": "百分比",
+    "Autopayout is not available for this token.": "此代币不支持自动提现。",
+    "manual payout": "手动提现",
+    "Payout fee-deposit account:": "提现手续费充值账户：",
+    "Balance:": "余额：",
+    "Saved": "已保存",
+    "Please, Fields cannot be empty or check if the values are entered correctly.": "字段不能为空，请检查输入值是否正确。",
+    "Response stauts: ": "响应状态：",
+    "Destination Address doesn't match Valid Litecoin address.": "收款地址不是有效的 Litecoin 地址。",
+    "Destination Address doesn't match Valid Dogecoin address.": "收款地址不是有效的 Dogecoin 地址。",
     "Wallet encryption setup": "钱包加密设置",
     "Enter wallet unlock password": "输入钱包解锁密码",
     "Unlocking wallets...": "正在解锁钱包...",
@@ -183,6 +240,11 @@ ZH_CN_TRANSLATIONS = {
 }
 
 
+EXACT_TEXT_TRANSLATIONS = {
+    "coin": "币",
+}
+
+
 SUPPORTED_LOCALES = {
     "en": "English",
     "zh_CN": "Simplified Chinese",
@@ -210,10 +272,22 @@ def _enabled_locale():
 
 
 def _translate_text(text):
+    stripped = text.strip()
+    if stripped in EXACT_TEXT_TRANSLATIONS:
+        return text.replace(stripped, EXACT_TEXT_TRANSLATIONS[stripped])
+
     translated = text
     for source, target in sorted(ZH_CN_TRANSLATIONS.items(), key=lambda item: len(item[0]), reverse=True):
         translated = translated.replace(source, target)
     return translated
+
+
+def _translate_attributes(markup):
+    def replace_attribute(match):
+        attr, quote, value = match.groups()
+        return f'{attr}={quote}{_translate_text(value)}{quote}'
+
+    return re.sub(r'\b(placeholder)=(["\'])(.*?)\2', replace_attribute, markup)
 
 
 def _translate_html(html):
@@ -239,7 +313,7 @@ def _translate_html(html):
                 tag_name = tag_match.group(1).lower()
                 if tag_name in {"script", "style"}:
                     raw_text_tag = None if part.startswith("</") else tag_name
-            translated.append(part)
+            translated.append(_translate_attributes(part))
             continue
 
         translated.append(part if raw_text_tag else _translate_text(part))
