@@ -13,6 +13,7 @@ from flask import g
 from flask import redirect
 from flask import render_template
 from flask import request
+from flask import make_response
 from flask import url_for
 from werkzeug.exceptions import abort
 from werkzeug.wrappers import Response
@@ -48,6 +49,7 @@ from shkeeper.models import (
     InvoiceStatus,
     Transaction,
 )
+from shkeeper.localization import SUPPORTED_LOCALES, get_current_locale, normalize_locale
 
 
 prometheus_client.REGISTRY.unregister(prometheus_client.GC_COLLECTOR)
@@ -69,7 +71,11 @@ def get_crypto_label(crypto_code: str) -> str:
 
 @bp.context_processor
 def inject_theme():
-    return {"theme": request.cookies.get("theme", "light")}
+    return {
+        "theme": request.cookies.get("theme", "light"),
+        "current_locale": get_current_locale(),
+        "supported_locales": SUPPORTED_LOCALES,
+    }
 
 
 @bp.route("/")
@@ -239,6 +245,21 @@ def settings():
     """User settings page including 2FA management"""
     user = g.user
     return render_template("wallet/settings.j2", user=user)
+
+
+@bp.post("/settings/locale")
+@login_required
+def save_locale():
+    locale = normalize_locale(request.form.get("locale"))
+    response = make_response(redirect(url_for("wallet.settings")))
+    response.set_cookie(
+        "shkeeper_locale",
+        locale,
+        max_age=60 * 60 * 24 * 365,
+        samesite="Lax",
+    )
+    flash("Interface language updated.", "success")
+    return response
 
 
 @bp.get("/parts/transactions")

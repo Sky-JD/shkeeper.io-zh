@@ -42,6 +42,21 @@
     <div class="col-lg-8">
       <div class="card mb-4">
         <div class="card-body functional-card common-text">
+          <h3 class="card-title mb-4 text-center subtitle-text">Interface Language</h3>
+          <form method="post" action="{{ url_for('wallet.save_locale') }}">
+            <label class="form-label common-text" for="interface-locale">Language</label>
+            <select id="interface-locale" name="locale" class="form-select mb-4">
+              {% for locale, label in supported_locales.items() %}
+                <option value="{{ locale }}" {{ 'selected' if current_locale == locale }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-outline-primary btn-outline-primary__customization" type="submit">Save language</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body functional-card common-text">
           <h3 class="card-title mb-4 text-center subtitle-text">Two-Factor Authentication</h3>
 
           {% if user.totp_enabled %}

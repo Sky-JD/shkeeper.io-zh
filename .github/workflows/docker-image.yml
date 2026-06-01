@@ -7,6 +7,7 @@ on:
       - "zh/**"
     tags:
       - "v*-zh"
+      - "v*-i18n"
   workflow_dispatch:
     inputs:
       image_tag:

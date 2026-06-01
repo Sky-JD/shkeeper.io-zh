@@ -1,5 +1,7 @@
 import os
 
+from flask import request
+
 
 ZH_CN_TRANSLATIONS = {
     "VSYS Wallet": "SHKeeper 钱包",
@@ -9,6 +11,12 @@ ZH_CN_TRANSLATIONS = {
     "Transactions": "交易记录",
     "Payouts": "提现",
     "Settings": "设置",
+    "Interface Language": "界面语言",
+    "Language": "语言",
+    "English": "English",
+    "Simplified Chinese": "简体中文",
+    "Save language": "保存语言",
+    "Interface language updated.": "界面语言已更新。",
     "Log out": "退出登录",
     "Login": "登录",
     "Password": "密码",
@@ -144,8 +152,26 @@ ZH_CN_TRANSLATIONS = {
 }
 
 
+SUPPORTED_LOCALES = {
+    "en": "English",
+    "zh_CN": "Simplified Chinese",
+}
+
+
+def normalize_locale(locale):
+    locale = (locale or "").strip().lower().replace("-", "_")
+    if locale in {"zh", "zh_cn", "zh_hans", "cn"}:
+        return "zh_CN"
+    return "en"
+
+
+def get_current_locale():
+    locale = request.cookies.get("shkeeper_locale") or os.environ.get("SHKEEPER_DEFAULT_LOCALE") or "en"
+    return normalize_locale(locale)
+
+
 def _enabled_locale():
-    locale = os.environ.get("SHKEEPER_LOCALE") or os.environ.get("SHKEEPER_LANG") or "zh_CN"
+    locale = get_current_locale()
     locale = locale.strip().lower().replace("-", "_")
     if locale in {"", "0", "false", "off", "en", "en_us"}:
         return None
