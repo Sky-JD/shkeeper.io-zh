@@ -33,6 +33,31 @@ ZH_CN_TRANSLATIONS = {
     "Blockchain key:": "区块链密钥：",
     "Advanced:": "高级：",
     "Configure Tron settings": "配置 Tron 设置",
+    "Tron Account Activation Required": "Tron 账户需要激活",
+    "Deposit at least 1 TRX to activate Tron accounts:": "请至少充值 1 TRX 以激活 Tron 账户：",
+    "Fee deposit account": "手续费充值账户",
+    "Stacking account": "质押账户",
+    "Balances and Stacking account": "余额和质押账户",
+    "Tron Settings": "Tron 设置",
+    "Fullnode Info": "全节点信息",
+    "General info": "基本信息",
+    "Top up staking account to activate actions": "请给质押账户充值后再执行操作",
+    "Staking account:": "质押账户：",
+    "Balances account:": "余额账户：",
+    "Energy delegation:": "能量委托：",
+    "Stake TRX": "质押 TRX",
+    "Stake for energy": "质押获取能量",
+    "Stake for bandwidth": "质押获取带宽",
+    "TRX to stake:": "质押 TRX 数量：",
+    "Are you sure you wish to stake TRX for energy?": "确定要质押 TRX 获取能量吗？",
+    "Are you sure you wish to stake TRX for bandwidth?": "确定要质押 TRX 获取带宽吗？",
+    "Return to overview": "返回概览",
+    "Return": "返回",
+    "Staked:": "已质押：",
+    "Staking result": "质押结果",
+    "Name": "名称",
+    "Lag": "延迟",
+    "Version": "版本",
     "Server offline": "节点离线",
     "Server Online": "节点在线",
     "Server Syncing": "节点同步中",
@@ -194,6 +219,10 @@ ZH_CN_TRANSLATIONS = {
     "Save": "保存",
     "On": "开启",
     "Off": "关闭",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "active": "已激活",
+    "inactive": "未激活",
     "Int": "整数",
     "Float": "小数",
     "Hours": "小时",
@@ -287,7 +316,7 @@ def _translate_attributes(markup):
         attr, quote, value = match.groups()
         return f'{attr}={quote}{_translate_text(value)}{quote}'
 
-    return re.sub(r'\b(placeholder)=(["\'])(.*?)\2', replace_attribute, markup)
+    return re.sub(r'\b(placeholder|title|hx-confirm)=(["\'])(.*?)\2', replace_attribute, markup)
 
 
 def _translate_html(html):
