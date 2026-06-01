@@ -201,6 +201,8 @@ def verify_2fa():
     """Verify 2FA token after password authentication."""
     pending_user_id = session.get("pending_user_id")
     if not pending_user_id:
+        if g.user is not None:
+            return redirect(url_for("wallet.show_unlock"))
         flash("Please log in first.")
         return redirect(url_for("auth.login"))
 
