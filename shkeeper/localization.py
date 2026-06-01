@@ -186,12 +186,11 @@ def _translate_html(html):
 
 
 def register_localization(app):
-    locale = _enabled_locale()
-    if locale != "zh_cn":
-        return
-
     @app.after_request
     def localize_response(response):
+        locale = _enabled_locale()
+        if locale != "zh_cn":
+            return response
         if response.direct_passthrough:
             return response
         if response.mimetype != "text/html":
