@@ -1,15 +1,17 @@
 function changeSource(ind) {
     let rate_inputs = document.getElementsByClassName("rates-cost-value");
+    let rateInput = rate_inputs[ind];
 
     let sourceType = selectArray[ind].value;
     if (sourceType == "manual") {
-        rate_inputs[ind].readOnly = false
-        rate_inputs[ind].dataset.manual = "on"
-        rate_inputs[ind].value = rate_inputs[ind].dataset.manual_rate;
+        rateInput.readOnly = false
+        rateInput.dataset.manual = "on"
+        rateInput.value = rateInput.dataset.manual_rate;
+        rateInput.title = "";
     } else {
-        delete rate_inputs[ind].dataset.manual
-        rate_inputs[ind].readOnly = true
-        getRealTRates(rate_inputs[ind].dataset.pairname.toLowerCase(), rate_inputs[ind]);
+        delete rateInput.dataset.manual
+        rateInput.readOnly = true
+        getRealTRates(rateInput, sourceType);
     }
 }
 
@@ -37,29 +39,43 @@ function change_fee_policy(ind) {
     }
 }
 
-function getRealTRates(pairName, currentRate) {
-    console.log('--->',currentRate)
-    //let currentCrypto = currentRate.dataset.pairname.replace("USDT", "").toUpperCase();
-    let currentCrypto = pairName.replace("usdt", "").toUpperCase();
-    console.log('--->',currentCrypto)
+function getRealTRates(currentRate, sourceType) {
+    let currentCrypto = currentRate.dataset.crypto;
+    if (!currentCrypto) {
+        currentCrypto = currentRate.dataset.pairname.toLowerCase().replace("usdt", "").toUpperCase();
+    }
     let app_conf = document.getElementById("app-config");
     let fiat = app_conf.dataset.fiat;
-    console.log('---->',fiat)
     if (fiat !== 'USD')
         { var url = "/" + currentCrypto + "/get-rate/" + fiat;} 
     else
         { var url = "/" + currentCrypto + "/get-rate";}
+
+    if (sourceType) {
+        url = url + "?source=" + encodeURIComponent(sourceType);
+    }
+
     let http2 = new XMLHttpRequest();
     http2.onload = function(){
-        let data = "";
-        if(http2.status == 200)
-        {
+        let data = {};
+        try {
             data = JSON.parse(this.responseText);
+        } catch (error) {
+            currentRate.title = "Failed to parse rate response";
+            return;
         }
-        if(data[currentCrypto] !== false)
+        if(http2.status == 200 && data[currentCrypto] !== false && data.status !== "error")
         {
             currentRate.value = data[currentCrypto];
+            currentRate.title = "";
+        } else {
+            currentRate.value = "";
+            currentRate.title = data.message || "Failed to get rate";
         }
+    }
+    http2.onerror = function() {
+        currentRate.value = "";
+        currentRate.title = "Failed to get rate";
     }
 
     http2.open("GET", url, true);
@@ -110,15 +126,12 @@ document.getElementById("set-all").addEventListener("click", function (e) {
     let source_select_array = document.getElementsByClassName("rates-source-value");
     let policy_select_array = document.getElementsByClassName("fee_policy_select");
 
-    console.log(policy_select_array)
-
     let percent_fee_input = document.getElementById("percent-fee-value-for-all");
     let fixed_fee_input = document.getElementById("fixed-fee-value-for-all");
     let source_select = document.getElementById("select-all");
     let policy_select = document.getElementById("all_fee_policy");
 
     for (let i = 0; i < source_select_array.length; i++) {
-        console.log(i)
         percent_fee_input_array[i].value = percent_fee_input.value;
         fixed_fee_input_array[i].value = fixed_fee_input.value;
         source_select_array[i].value = source_select.value;
@@ -126,13 +139,5 @@ document.getElementById("set-all").addEventListener("click", function (e) {
 
         changeSource(i)
         change_fee_policy(i)
-    }
-});
-
-window.addEventListener('DOMContentLoaded', function () {
-    let currentRates = document.getElementsByClassName("rates-cost-value");
-    for (let i = 0; i < currentRates.length; i++) {
-        let pairName = currentRates[i].dataset.pairname.toLowerCase();
-        getRealTRates(pairName, currentRates[i]);
     }
 });

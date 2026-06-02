@@ -94,9 +94,38 @@ def wallets():
 @bp.get("/<crypto_name>/get-rate/<fiat>")
 @login_required
 def get_source_rate(crypto_name, fiat):
-    #fiat = "USD"
     rate = ExchangeRate.get(fiat, crypto_name)
-    current_rate = rate.get_rate()
+    source = request.args.get("source")
+
+    if source:
+        if source == "manual":
+            current_rate = rate.rate
+        else:
+            rate_source = RateSource.instances.get(source)
+            if rate_source is None:
+                return {
+                    "status": "error",
+                    "message": f"Unknown rate source: {source}",
+                }, 400
+
+            try:
+                current_rate = rate_source.get_rate(fiat, crypto_name)
+            except Exception as exc:
+                return {
+                    "status": "error",
+                    "message": str(exc),
+                    crypto_name: False,
+                }, 502
+    else:
+        try:
+            current_rate = rate.get_rate()
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": str(exc),
+                crypto_name: False,
+            }, 502
+
     return {crypto_name: current_rate}
 
 

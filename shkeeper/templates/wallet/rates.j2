@@ -53,7 +53,7 @@
                       class="rates-cost-value form-control form-control-sm common-text source-manual-price"
                       type="number" step="any" min="0" {% if crypto.rate.source=='manual' %}
                       value="{{ crypto.rate.rate|format_decimal }}" {% endif %} data-pairname="{{crypto.crypto}}USDT"
-                      data-manual_rate="{{ crypto.rate.rate|format_decimal }}" />
+                      data-crypto="{{crypto.crypto}}" data-manual_rate="{{ crypto.rate.rate|format_decimal }}" />
                   </div>
                 </div>
               </div>
