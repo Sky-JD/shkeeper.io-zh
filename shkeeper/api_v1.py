@@ -250,6 +250,147 @@ def add_transaction(crypto_name):
     return response
 
 
+def _bool_from_request(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "y", "on")
+    return bool(value)
+
+
+def _invoice_by_crypto_addr(crypto_name, addr):
+    invoice_address = InvoiceAddress.query.filter_by(
+        crypto=crypto_name, addr=addr
+    ).first()
+    if not invoice_address and addr:
+        invoice_address = InvoiceAddress.query.filter(
+            InvoiceAddress.crypto == crypto_name,
+            db.func.lower(InvoiceAddress.addr) == addr.lower(),
+        ).first()
+    if invoice_address:
+        return Invoice.query.filter_by(id=invoice_address.invoice_id).first()
+
+    invoice = Invoice.query.filter(
+        Invoice.crypto == crypto_name,
+        Invoice.addr == addr,
+        Invoice.status != InvoiceStatus.OUTGOING,
+    ).first()
+    if not invoice and addr:
+        invoice = Invoice.query.filter(
+            Invoice.crypto == crypto_name,
+            db.func.lower(Invoice.addr) == addr.lower(),
+            Invoice.status != InvoiceStatus.OUTGOING,
+        ).first()
+    return invoice
+
+
+@bp.post("/<crypto_name>/verified-transaction")
+@api_key_required
+def add_verified_transaction(crypto_name):
+    try:
+        try:
+            crypto = Crypto.instances[crypto_name]
+        except KeyError:
+            return {
+                "status": "error",
+                "message": f"{crypto_name} payment gateway is unavailable",
+            }, 404
+
+        tx = request.get_json(force=True)
+        txid = str(tx.get("txid") or tx.get("transaction_hash") or "").strip()
+        addr = str(tx.get("addr") or tx.get("address") or tx.get("to_address") or "").strip()
+        amount_value = tx.get("amount") or tx.get("amount_crypto")
+        external_id = str(tx.get("external_id") or "").strip()
+        confirmations = int(tx.get("confirmations") or crypto.wallet.confirmations)
+        send_callback = _bool_from_request(tx.get("send_callback"), default=True)
+
+        if not txid or not addr or amount_value is None:
+            return {
+                "status": "error",
+                "message": "txid, addr and amount are required",
+            }, 400
+
+        amount = Decimal(str(amount_value))
+        if amount <= 0:
+            return {"status": "error", "message": "amount must be positive"}, 400
+
+        invoice = _invoice_by_crypto_addr(crypto.crypto, addr)
+        if not invoice:
+            return {
+                "status": "error",
+                "message": f"{addr} is not related to any invoice",
+            }, 404
+        if external_id and invoice.external_id != external_id:
+            return {
+                "status": "error",
+                "message": "external_id does not match invoice address",
+            }, 409
+
+        existing = Transaction.query.filter_by(
+            crypto=crypto.crypto, txid=txid, invoice_id=invoice.id
+        ).first()
+        if existing:
+            return {
+                "status": "success",
+                "id": existing.id,
+                "duplicate": True,
+                "invoice": invoice.to_json(),
+            }
+
+        try:
+            transaction = Transaction.add(
+                crypto,
+                {
+                    "txid": txid,
+                    "addr": addr,
+                    "amount": amount,
+                    "confirmations": confirmations,
+                },
+            )
+        except sqlalchemy.exc.IntegrityError:
+            db.session.rollback()
+            existing = Transaction.query.filter_by(
+                crypto=crypto.crypto, txid=txid, invoice_id=invoice.id
+            ).first()
+            if existing:
+                return {
+                    "status": "success",
+                    "id": existing.id,
+                    "duplicate": True,
+                    "invoice": invoice.to_json(),
+                }
+            raise
+
+        transaction.invoice.update_with_tx(transaction)
+        UnconfirmedTransaction.delete(crypto_name, txid)
+        if not transaction.need_more_confirmations:
+            if send_callback:
+                send_notification(transaction)
+            else:
+                transaction.callback_confirmed = True
+                db.session.commit()
+
+        return {
+            "status": "success",
+            "id": transaction.id,
+            "duplicate": False,
+            "invoice": transaction.invoice.to_json(),
+        }
+    except Exception as e:
+        app.logger.exception(
+            "Exception while adding verified transaction: %s/%s",
+            crypto_name,
+            request.get_data(as_text=True),
+        )
+        return {
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc(),
+        }, 409
+
+
 @bp.post("/<crypto_name>/payout_destinations")
 @login_required
 def payout_destinations(crypto_name):

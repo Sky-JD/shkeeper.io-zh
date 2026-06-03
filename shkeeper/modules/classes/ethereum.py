@@ -44,6 +44,7 @@ class Ethereum(Crypto):
     def balance(self):
         self._balance_error = None
         api_balance = None
+        local_confirmed_balance = None
         try:
             response = requests.post(
                 f"http://{self.gethost()}/{self.crypto}/balance",
@@ -55,6 +56,7 @@ class Ethereum(Crypto):
             app.logger.warning("Wallet API balance error for %s: %s", self.crypto, e)
 
         if self.crypto != self.network_currency:
+            local_confirmed_balance = self._local_confirmed_invoice_balance()
             aggregate_balance = evm_accounts_balance(self.network_currency, self.crypto)
             if aggregate_balance.error:
                 self._balance_error = (
@@ -62,6 +64,21 @@ class Ethereum(Crypto):
                 )
             elif aggregate_balance.configured and aggregate_balance.amount is not None:
                 self._balance_source = f"{self.network_currency.lower()}_accounts_aggregate"
+                amount = aggregate_balance.amount
+                if (
+                    local_confirmed_balance is not None
+                    and local_confirmed_balance > amount
+                ):
+                    app.logger.info(
+                        "%s account aggregate %s is lower than local confirmed invoice balance %s",
+                        self.crypto,
+                        amount,
+                        local_confirmed_balance,
+                    )
+                    self._balance_source = (
+                        f"{self.network_currency.lower()}_accounts_aggregate_local_floor"
+                    )
+                    amount = local_confirmed_balance
                 if api_balance is not None and aggregate_balance.amount != api_balance:
                     app.logger.info(
                         "%s wallet API balance %s differs from account aggregate %s",
@@ -69,10 +86,49 @@ class Ethereum(Crypto):
                         api_balance,
                         aggregate_balance.amount,
                     )
-                return aggregate_balance.amount
+                return amount
+
+            if (
+                local_confirmed_balance is not None
+                and api_balance is not None
+                and local_confirmed_balance > api_balance
+            ):
+                app.logger.info(
+                    "%s wallet API balance %s is lower than local confirmed invoice balance %s",
+                    self.crypto,
+                    api_balance,
+                    local_confirmed_balance,
+                )
+                self._balance_source = (
+                    f"{self.network_currency.lower()}_local_confirmed_floor"
+                )
+                return local_confirmed_balance
 
         self._balance_source = "wallet_api"
         return api_balance if api_balance is not None else Decimal("0")
+
+    def _local_confirmed_invoice_balance(self):
+        try:
+            from sqlalchemy import func
+            from shkeeper import db
+            from shkeeper.models import Invoice, InvoiceStatus, Transaction
+
+            value = (
+                db.session.query(func.coalesce(func.sum(Transaction.amount_crypto), 0))
+                .join(Invoice, Transaction.invoice_id == Invoice.id)
+                .filter(Transaction.crypto == self.crypto)
+                .filter(Transaction.need_more_confirmations == False)
+                .filter(Invoice.status != InvoiceStatus.OUTGOING)
+                .scalar()
+            )
+            return Decimal(str(value or 0))
+        except Exception as e:
+            app.logger.warning(
+                "Local confirmed invoice balance query failed for %s: %s",
+                self.crypto,
+                e,
+            )
+            return None
 
     def get_confirmations_by_txid(self, txid):
         transactions = self.getaddrbytx(txid)
@@ -120,8 +176,24 @@ class Ethereum(Crypto):
             auth=self.get_auth_creds(),
             timeout=60,
         ).json(parse_float=Decimal)
+        if isinstance(response, dict):
+            if response.get("status") == "error":
+                raise Exception(
+                    response.get("msg") or response.get("message") or str(response)
+                )
+            response = response.get("transactions") or response.get("result") or []
         result = []
-        for address, amount, confirmations, category in response:
+        for item in response:
+            if isinstance(item, dict):
+                address = item.get("addr") or item.get("address")
+                amount = item.get("amount") or item.get("amount_crypto")
+                confirmations = item.get("confirmations", 1)
+                category = item.get("category", "receive")
+            elif len(item) == 3:
+                address, amount, confirmations = item
+                category = "receive"
+            else:
+                address, amount, confirmations, category = item
             result.append([address, Decimal(amount), confirmations, category])
         return result
 
