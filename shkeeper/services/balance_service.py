@@ -17,6 +17,8 @@ def _build_balance(crypto_name: str, logger, app):
             crypto_amount = Decimal(crypto.balance() or 0)
             amount_fiat = crypto_amount * Decimal(rate)
             server_status = crypto.getstatus()
+            balance_source = crypto.balance_source
+            balance_error = crypto.balance_error
         except Exception as e:
             logger.exception(f"_build_balance exception for {crypto_name}")
             return None
@@ -28,6 +30,8 @@ def _build_balance(crypto_name: str, logger, app):
             "fiat": fiat,
             "amount_fiat": format_decimal(amount_fiat),
             "server_status": server_status,
+            "balance_source": balance_source,
+            "balance_error": balance_error,
         }
 
 def get_balances(includes: list[str] | None):
@@ -42,7 +46,8 @@ def get_balances(includes: list[str] | None):
             return None, "No valid cryptos requested"
     else:
         target = sorted(available_coins)
-    with ThreadPoolExecutor() as executor:
+    max_workers = max(1, int(app.config.get("BALANCE_QUERY_WORKERS", 8)))
+    with ThreadPoolExecutor(max_workers=min(len(target), max_workers)) as executor:
         results = list(
             executor.map(lambda c: _build_balance(c, logger, app), target)
         )

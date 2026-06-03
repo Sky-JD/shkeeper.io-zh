@@ -98,6 +98,14 @@ class Crypto(abc.ABC):
     def balance(self):
         pass
 
+    @property
+    def balance_source(self):
+        return getattr(self, "_balance_source", "wallet_api")
+
+    @property
+    def balance_error(self):
+        return getattr(self, "_balance_error", None)
+
     @abc.abstractmethod
     def getstatus(self):
         pass

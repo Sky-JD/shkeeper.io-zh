@@ -321,10 +321,13 @@ def autopayout(crypto_name):
 @login_required
 def status(crypto_name):
     crypto = Crypto.instances[crypto_name]
+    balance = crypto.balance()
     return {
         "name": crypto.crypto,
-        "amount": format_decimal(crypto.balance()) if crypto.balance() else 0,
+        "amount": format_decimal(balance) if balance else 0,
         "server": crypto.getstatus(),
+        "balance_source": crypto.balance_source,
+        "balance_error": crypto.balance_error,
     }
 
 
@@ -337,7 +340,8 @@ def balance(crypto_name):
     fiat = "USD"
     rate = ExchangeRate.get(fiat, crypto_name)
     current_rate = rate.get_rate()
-    crypto_amount = format_decimal(crypto.balance()) if crypto.balance() else 0
+    balance = crypto.balance()
+    crypto_amount = format_decimal(balance) if balance else 0
 
     return {
         "name": crypto.crypto,
@@ -347,6 +351,8 @@ def balance(crypto_name):
         "fiat": "USD",
         "amount_fiat": format_decimal(Decimal(crypto_amount) * Decimal(current_rate)),
         "server_status": crypto.getstatus(),
+        "balance_source": crypto.balance_source,
+        "balance_error": crypto.balance_error,
     }
 
 

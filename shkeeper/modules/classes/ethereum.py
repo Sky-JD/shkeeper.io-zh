@@ -7,6 +7,7 @@ from collections import namedtuple
 from decimal import Decimal
 from flask import current_app as app
 from shkeeper.modules.classes.crypto import Crypto
+from shkeeper.services.backend_balances import evm_accounts_balance
 
 
 class Ethereum(Crypto):
@@ -41,17 +42,37 @@ class Ethereum(Crypto):
         return FeeDepositAccount(response["account"], Decimal(response["balance"]))
 
     def balance(self):
+        self._balance_error = None
+        api_balance = None
         try:
             response = requests.post(
                 f"http://{self.gethost()}/{self.crypto}/balance",
                 auth=self.get_auth_creds(),
             ).json(parse_float=Decimal)
-            balance = response["balance"]
+            api_balance = Decimal(response["balance"])
         except Exception as e:
-            app.logger.warning(f"Error: {e}")
-            balance = False
+            self._balance_error = str(e)
+            app.logger.warning("Wallet API balance error for %s: %s", self.crypto, e)
 
-        return Decimal(balance)
+        if self.crypto != self.network_currency:
+            aggregate_balance = evm_accounts_balance(self.network_currency, self.crypto)
+            if aggregate_balance.error:
+                self._balance_error = (
+                    f"accounts_aggregate: {aggregate_balance.error}"
+                )
+            elif aggregate_balance.configured and aggregate_balance.amount is not None:
+                self._balance_source = f"{self.network_currency.lower()}_accounts_aggregate"
+                if api_balance is not None and aggregate_balance.amount != api_balance:
+                    app.logger.info(
+                        "%s wallet API balance %s differs from account aggregate %s",
+                        self.crypto,
+                        api_balance,
+                        aggregate_balance.amount,
+                    )
+                return aggregate_balance.amount
+
+        self._balance_source = "wallet_api"
+        return api_balance if api_balance is not None else Decimal("0")
 
     def get_confirmations_by_txid(self, txid):
         transactions = self.getaddrbytx(txid)

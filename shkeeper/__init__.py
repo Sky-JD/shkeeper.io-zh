@@ -74,6 +74,12 @@ def create_app(test_config=None):
         REQUESTS_NOTIFICATION_TIMEOUT=int(
             os.environ.get("REQUESTS_NOTIFICATION_TIMEOUT", 30)
         ),
+        CALLBACK_USER_AGENT=os.environ.get(
+            "SHKEEPER_CALLBACK_USER_AGENT", "SHKeeper-Callback/1.0"
+        ),
+        BALANCE_QUERY_WORKERS=int(os.environ.get("BALANCE_QUERY_WORKERS", "8")),
+        SCHEDULER_ENABLED=os.environ.get("SCHEDULER_ENABLED", "true").lower()
+        not in ("0", "false", "no", "off"),
         DEV_MODE=bool(os.environ.get("DEV_MODE", False)),
         DEV_MODE_ENC_PW=os.environ.get("DEV_MODE_ENC_PW"),
         ENABLE_PAYOUT_CALLBACK=bool(os.environ.get("ENABLE_PAYOUT_CALLBACK")),
@@ -221,7 +227,10 @@ def create_app(test_config=None):
 
         from . import tasks
 
-        scheduler.start()
+        if app.config.get("SCHEDULER_ENABLED"):
+            scheduler.start()
+        else:
+            app.logger.info("APScheduler is disabled by SCHEDULER_ENABLED")
 
         # end of with app.app_context():
 

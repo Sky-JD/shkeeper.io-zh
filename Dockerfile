@@ -10,10 +10,9 @@ RUN pip3 install -r requirements.txt
 
 CMD gunicorn \
     --access-logfile - \
-    --reload \
-    --workers 1 \
-    --threads 32 \
+    --workers "${GUNICORN_WORKERS:-1}" \
+    --threads "${GUNICORN_THREADS:-32}" \
     --worker-class gthread \
-    --timeout 30 \
+    --timeout "${GUNICORN_TIMEOUT:-30}" \
     -b 0.0.0.0:5000 \
     "shkeeper:create_app()"

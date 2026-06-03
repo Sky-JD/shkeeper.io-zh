@@ -13,6 +13,13 @@ bp = Blueprint("callback", __name__)
 DEFAULT_CURRENCY = 'USD'
 
 
+def callback_headers(apikey=None):
+    headers = {"User-Agent": app.config.get("CALLBACK_USER_AGENT")}
+    if apikey:
+        headers["X-Shkeeper-Api-Key"] = apikey
+    return headers
+
+
 def send_unconfirmed_notification(utx: UnconfirmedTransaction):
     app.logger.info(
         f"send_unconfirmed_notification started for {utx.crypto} {utx.txid}, {utx.addr}, {utx.amount_crypto}"
@@ -35,13 +42,13 @@ def send_unconfirmed_notification(utx: UnconfirmedTransaction):
     }
 
     app.logger.warning(
-        f"[{utx.crypto}/{utx.txid}] Posting {notification} to {invoice.callback_url} with api key {apikey}"
+        f"[{utx.crypto}/{utx.txid}] Posting {notification} to {invoice.callback_url} with api key ***MASKED***"
     )
     try:
         r = requests.post(
             invoice.callback_url,
             json=notification,
-            headers={"X-Shkeeper-Api-Key": apikey},
+            headers=callback_headers(apikey),
             timeout=app.config.get("REQUESTS_NOTIFICATION_TIMEOUT"),
         )
     except Exception as e:
@@ -112,13 +119,13 @@ def send_notification(tx):
 
     apikey = Crypto.instances[tx.crypto].wallet.apikey
     app.logger.warning(
-        f"[{tx.crypto}/{tx.txid}] Posting {json.dumps(notification)} to {tx.invoice.callback_url} with api key {apikey}"
+        f"[{tx.crypto}/{tx.txid}] Posting {json.dumps(notification)} to {tx.invoice.callback_url} with api key ***MASKED***"
     )
     try:
         r = requests.post(
             tx.invoice.callback_url,
             json=notification,
-            headers={"X-Shkeeper-Api-Key": apikey},
+            headers=callback_headers(apikey),
             timeout=app.config.get("REQUESTS_NOTIFICATION_TIMEOUT"),
         )
     except Exception as e:
@@ -295,6 +302,7 @@ def send_payout_notification(notif: Notification):
         r = requests.post(
             payout.callback_url,
             json=payload,
+            headers=callback_headers(),
             timeout=app.config.get("REQUESTS_NOTIFICATION_TIMEOUT", 10),
         )
     except Exception as e:
